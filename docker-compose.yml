@@ -1,0 +1,65 @@
+services:
+
+  mongodb:
+    image: mongo:7
+    container_name: movie_mongodb
+
+    ports:
+      - "27017:27017"
+
+    restart: unless-stopped
+
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: movie_zookeeper
+
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+    ports:
+      - "2181:2181"
+
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: movie_kafka
+    restart: unless-stopped
+
+    depends_on:
+      - zookeeper
+
+    ports:
+      - "9092:9092"
+
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+
+  nodered:
+    image: nodered/node-red:3.1.9
+    container_name: movie_nodered
+
+    depends_on:
+      - mongodb
+
+    ports:
+      - "1880:1880"
+
+    restart: unless-stopped
+
+    environment:
+      - TZ=Europe/Madrid
+
+    volumes:
+      - nodered_data:/data
+      - ./nodered/flows.json:/data/flows.json
+      - ./nodered/settings.js:/data/settings.js
+
+
+volumes:
+  nodered_data:
