@@ -3,6 +3,10 @@
 venv/
 env/
 
+# IDEs
+.vscode/
+.idea/
+
 # Environment variables
 .env
 
