@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CineRec — Dashboard</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .nr-bar {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 0.55rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .nr-bar-title {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      flex: 1;
+    }
+    .nr-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .nr-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #555;
+      transition: background 0.3s;
+    }
+    .nr-dot.online  { background: #4caf50; }
+    .nr-dot.offline { background: #e53935; }
+
+    .nr-frame {
+      width: 100%;
+      height: calc(100vh - 104px);
+      border: none;
+      display: block;
+    }
+
+    .nr-offline {
+      height: calc(100vh - 104px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 2rem;
+    }
+    .nr-offline .icon { font-size: 4rem; }
+    .nr-offline h2   { font-size: 1.4rem; color: var(--text-secondary); }
+    .nr-offline p    { font-size: 0.9rem; max-width: 440px; }
+    .nr-offline code {
+      background: var(--bg-secondary);
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="nf-nav">
+    <a href="movies.html" class="navbar-brand">
+      <span class="brand-icon">🎬</span>
+      <span><b>Cine</b>Rec</span>
+    </a>
+    <ul class="navbar-links">
+      <li><a href="movies.html">🎥 Películas</a></li>
+      <li><a href="dashboard.html" class="active">📊 Dashboard</a></li>
+    </ul>
+    <div class="navbar-user">
+      <a href="profile.html" class="avatar-link">
+        <div class="user-avatar" id="user-avatar">U</div>
+        <span id="user-name" style="font-size:0.875rem; color:var(--text-secondary);"></span>
+      </a>
+      <button class="btn-logout" onclick="cerrarSesion()">Salir</button>
+    </div>
+  </nav>
+
+  <!-- BARRA SUPERIOR -->
+  <div class="nr-bar">
+    <span class="nr-bar-title">📊 Dashboard Node-RED · <code style="font-size:0.8rem;color:var(--accent)">localhost:1881/ui</code></span>
+    <span class="nr-status">
+      <span class="nr-dot" id="nr-dot"></span>
+      <span id="nr-status-text">Comprobando...</span>
+    </span>
+    <button class="btn btn-secondary btn-sm" onclick="recargarDashboard()" title="Recargar">↺ Recargar</button>
+    <button class="btn btn-primary btn-sm" onclick="window.open('http://localhost:1881/ui','_blank','noopener')">↗ Abrir en nueva pestaña</button>
+  </div>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <div id="nr-area"></div>
+
+  <div class="toast-container" id="toast-container"></div>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>

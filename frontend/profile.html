@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CineRec — Mi Perfil</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ===== NAVBAR ===== -->
+  <nav class="navbar">
+    <a href="movies.html" class="navbar-brand">
+      <span class="brand-icon">🎬</span>
+      <span><b>Cine</b>Rec</span>
+    </a>
+    <ul class="navbar-links">
+      <li><a href="movies.html">🎥 Películas</a></li>
+      <li><a href="dashboard.html">📊 Dashboard</a></li>
+    </ul>
+    <div class="navbar-user">
+      <a href="profile.html" class="avatar-link">
+        <div class="user-avatar" id="user-avatar">U</div>
+        <span id="user-name" style="font-size:0.875rem; color:var(--text-secondary);"></span>
+      </a>
+      <button class="btn-logout" onclick="cerrarSesion()">Salir</button>
+    </div>
+  </nav>
+
+  <!-- ===== CONTENT ===== -->
+  <main class="page-content">
+
+    <div class="page-header">
+      <h1 class="page-title">Mi perfil 👤</h1>
+      <p class="page-subtitle">Gestiona tu información personal y preferencias</p>
+    </div>
+
+    <div class="profile-layout">
+
+      <!-- ===== SIDEBAR ===== -->
+      <aside class="profile-sidebar">
+        <div class="profile-avatar-lg" id="sidebar-avatar">U</div>
+        <div class="profile-display-name" id="sidebar-name">—</div>
+        <div class="profile-display-email" id="sidebar-email">—</div>
+        <div class="profile-member-since" id="sidebar-since">Miembro desde —</div>
+
+        <div class="profile-stats-mini">
+          <div class="profile-stat-mini">
+            <div class="profile-stat-mini-value" id="stat-rated">0</div>
+            <div class="profile-stat-mini-label">Valoradas</div>
+          </div>
+          <div class="profile-stat-mini">
+            <div class="profile-stat-mini-value" id="stat-watchlist">0</div>
+            <div class="profile-stat-mini-label">Lista</div>
+          </div>
+        </div>
+
+        <nav class="profile-nav">
+          <button class="profile-nav-btn active" id="nav-info"        onclick="mostrarPanel('info')">👤 Información</button>
+          <button class="profile-nav-btn"         id="nav-watchlist"  onclick="mostrarPanel('watchlist')">📋 Mi lista</button>
+          <button class="profile-nav-btn"         id="nav-ratings"    onclick="mostrarPanel('ratings')">⭐ Mis valoraciones</button>
+          <button class="profile-nav-btn"         id="nav-security"   onclick="mostrarPanel('security')">🔒 Seguridad</button>
+          <button class="profile-nav-btn"         id="nav-danger"     onclick="mostrarPanel('danger')" style="color:var(--danger);">⚠️ Zona peligrosa</button>
+        </nav>
+      </aside>
+
+      <!-- ===== PANELS ===== -->
+      <div class="profile-panels">
+
+        <!-- Panel: Información personal -->
+        <div id="panel-info" class="active">
+
+          <div class="profile-card">
+            <div class="profile-card-title"><span class="icon">👤</span> Información personal</div>
+
+            <div id="info-alert" style="display:none;"></div>
+
+            <div class="form-group">
+              <label class="form-label" for="edit-name">Nombre de usuario</label>
+              <input type="text" id="edit-name" class="form-input" placeholder="Tu nombre" />
+              <div class="form-error" id="edit-name-error"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="edit-email">Correo electrónico</label>
+              <input type="email" id="edit-email" class="form-input" placeholder="tu@correo.com" />
+              <div class="form-error" id="edit-email-error"></div>
+            </div>
+
+            <div style="display:flex; gap:0.75rem; margin-top:0.5rem;">
+              <button class="btn btn-primary" onclick="guardarInfo()">Guardar cambios</button>
+              <button class="btn btn-secondary" onclick="reiniciarInfo()">Descartar</button>
+            </div>
+          </div>
+
+          <div class="profile-card">
+            <div class="profile-card-title"><span class="icon">🪪</span> Detalles de la cuenta</div>
+            <div class="profile-field-row">
+              <div>
+                <div class="profile-field-label">ID de usuario</div>
+                <div class="profile-field-value" id="detail-id" style="font-family:monospace; font-size:0.85rem;">—</div>
+              </div>
+            </div>
+            <div class="profile-field-row">
+              <div>
+                <div class="profile-field-label">Rol</div>
+                <div class="profile-field-value"><span class="badge-role" id="detail-role">usuario</span></div>
+              </div>
+            </div>
+            <div class="profile-field-row">
+              <div>
+                <div class="profile-field-label">Fecha de registro</div>
+                <div class="profile-field-value" id="detail-date">—</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Panel: Mi lista -->
+        <div id="panel-watchlist">
+          <div class="profile-card">
+            <div class="profile-card-title"><span class="icon">📋</span> Mi lista</div>
+            <div id="watchlist-content">
+              <p style="color:var(--text-muted); font-size:.875rem;">Cargando...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel: Mis valoraciones -->
+        <div id="panel-ratings">
+          <div class="profile-card">
+            <div class="profile-card-title"><span class="icon">⭐</span> Mis valoraciones</div>
+            <div id="ratings-content">
+              <p style="color:var(--text-muted); font-size:.875rem;">Cargando...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel: Seguridad -->
+        <div id="panel-security">
+
+          <div class="profile-card">
+            <div class="profile-card-title"><span class="icon">🔒</span> Cambiar contraseña</div>
+
+            <div id="security-alert" style="display:none;"></div>
+
+            <div class="form-group">
+              <label class="form-label" for="pwd-current">Contraseña actual</label>
+              <div class="password-wrap">
+                <input type="password" id="pwd-current" class="form-input" placeholder="Tu contraseña actual" autocomplete="current-password" />
+                <button type="button" class="btn-eye" onclick="alternarContrasena('pwd-current', this)" title="Mostrar/ocultar">👁️</button>
+              </div>
+              <div class="form-error" id="pwd-current-error"></div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="pwd-new">Nueva contraseña</label>
+              <div class="password-wrap">
+                <input type="password" id="pwd-new" class="form-input" placeholder="Mínimo 6 caracteres" autocomplete="new-password" />
+                <button type="button" class="btn-eye" onclick="alternarContrasena('pwd-new', this)" title="Mostrar/ocultar">👁️</button>
+              </div>
+              <div class="form-error" id="pwd-new-error"></div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="pwd-confirm">Confirmar nueva contraseña</label>
+              <div class="password-wrap">
+                <input type="password" id="pwd-confirm" class="form-input" placeholder="Repite la nueva contraseña" autocomplete="new-password" />
+                <button type="button" class="btn-eye" onclick="alternarContrasena('pwd-confirm', this)" title="Mostrar/ocultar">👁️</button>
+              </div>
+              <div class="form-error" id="pwd-confirm-error"></div>
+            </div>
+
+            <button class="btn btn-primary" onclick="cambiarContrasena()">Actualizar contraseña</button>
+          </div>
+
+        </div>
+
+        <!-- Panel: Zona peligrosa -->
+        <div id="panel-danger">
+
+          <div class="profile-card danger-zone">
+            <div class="profile-card-title"><span class="icon">⚠️</span> Zona peligrosa</div>
+
+            <div class="profile-field-row">
+              <div>
+                <div class="profile-field-label" style="color:var(--text-secondary); font-size:0.875rem; font-weight:500;">Cerrar todas las sesiones</div>
+                <div style="font-size:0.8rem; color:var(--text-muted);">Cierra la sesión en todos los dispositivos excepto este.</div>
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="cerrarTodasLasSesiones()" style="flex-shrink:0; border-color:var(--danger); color:var(--danger);">Cerrar sesiones</button>
+            </div>
+
+            <div class="profile-field-row">
+              <div>
+                <div class="profile-field-label" style="color:var(--text-secondary); font-size:0.875rem; font-weight:500;">Eliminar cuenta</div>
+                <div style="font-size:0.8rem; color:var(--text-muted);">Elimina permanentemente tu cuenta y todos tus datos. Esta acción no se puede deshacer.</div>
+              </div>
+              <button class="btn btn-sm" style="flex-shrink:0; background:var(--danger); color:#fff;" onclick="confirmarEliminarCuenta()">Eliminar cuenta</button>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+      <!-- /profile-panels -->
+
+    </div>
+    <!-- /profile-layout -->
+
+  </main>
+
+  <!-- Modal confirmación eliminar cuenta -->
+  <div class="modal-overlay" id="delete-modal" onclick="if(event.target===this) cerrarModalEliminar()">
+    <div class="modal" style="max-width:400px;">
+      <div class="modal-header">
+        <div class="modal-title" style="color:var(--danger);">⚠️ Eliminar cuenta</div>
+        <button class="modal-close" onclick="cerrarModalEliminar()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--text-secondary); margin-bottom:1.25rem;">Esta acción es <strong>irreversible</strong>. Se eliminarán todos tus datos, historial y preferencias.</p>
+        <div class="form-group">
+          <label class="form-label" for="delete-confirm-input">Escribe <strong>ELIMINAR</strong> para confirmar</label>
+          <input type="text" id="delete-confirm-input" class="form-input" placeholder="ELIMINAR" />
+        </div>
+        <div style="display:flex; gap:0.75rem; margin-top:0.5rem;">
+          <button class="btn btn-secondary" onclick="cerrarModalEliminar()">Cancelar</button>
+          <button class="btn" style="background:var(--danger); color:#fff;" onclick="eliminarCuenta()">Sí, eliminar mi cuenta</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="js/profile.js"></script>
+</body>
+</html>

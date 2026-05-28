@@ -1,17 +1,31 @@
-from pymongo import MongoClient
-import pandas as pd
+"""
+Collaborative Filtering — SVD (Surprise)
+
+Uso:
+    python -m recommender.collaborative.collaborative_filtering --train
+    python -m recommender.collaborative.collaborative_filtering --predict 42
+
+--train   : Entrena SVD con todos los ratings y guarda el modelo en GridFS.
+--predict : Carga el modelo de GridFS y genera recomendaciones para el usuario.
+"""
+import argparse
 from pathlib import Path
 
-from surprise import Dataset
-from surprise import Reader
-from surprise import SVD
+import pandas as pd
+from pymongo import MongoClient
+from surprise import Dataset, Reader, SVD
 from surprise.model_selection import train_test_split
 from surprise.accuracy import rmse
 
 import sys
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 from config import MONGO_URI, DATABASE_NAME
+from recommender.model_store import save_model, load_model
 
+MODEL_NAME = "model_collaborative"
+
+
+# ── Conexión ──────────────────────────────────────────────────────────────────
 
 _client = None
 
@@ -22,239 +36,114 @@ def get_db():
     return _client[DATABASE_NAME]
 
 
-# =========================
-# LOAD DATA
-# =========================
+# ── Carga de datos ────────────────────────────────────────────────────────────
 
-def load_ratings_dataframe():
-
-    print("\nLoading ratings from MongoDB...")
-
-    ratings_cursor = get_db()["ratings"].find()
-
-    ratings_df = pd.DataFrame(list(ratings_cursor))
-
-    return ratings_df
+def load_ratings():
+    print("Cargando ratings de MongoDB...")
+    docs = list(get_db()["ratings"].find({}, {"userId": 1, "movieId": 1, "rating": 1}))
+    return pd.DataFrame(docs)
 
 
-def load_movies_dataframe():
-
-    movies_cursor = get_db()["movies"].find()
-
-    movies_df = pd.DataFrame(list(movies_cursor))
-
-    return movies_df
+def load_movies():
+    docs = list(get_db()["movies"].find({}, {"movieId": 1, "title": 1, "genres": 1}))
+    return pd.DataFrame(docs)
 
 
-# =========================
-# PREPARE SURPRISE DATASET
-# =========================
+# ── Entrenamiento ─────────────────────────────────────────────────────────────
 
-def prepare_dataset(ratings_df):
+def train():
+    print("\n=== ENTRENAMIENTO — Collaborative Filtering (SVD) ===\n")
 
-    print("Preparing dataset for Surprise...")
+    ratings_df = load_ratings()
 
     reader = Reader(rating_scale=(1, 5))
+    data = Dataset.load_from_df(ratings_df[["userId", "movieId", "rating"]], reader)
 
-    data = Dataset.load_from_df(
-        ratings_df[["userId", "movieId", "rating"]],
-        reader
-    )
+    # Evaluamos con split 80/20 para tener métricas
+    trainset_eval, testset = train_test_split(data, test_size=0.2, random_state=42)
+    model_eval = SVD(random_state=42)
+    model_eval.fit(trainset_eval)
+    preds = model_eval.test(testset)
+    model_rmse = rmse(preds, verbose=False)
+    print(f"RMSE (evaluación): {model_rmse:.4f}")
 
-    return data
+    # Entrenamos sobre el dataset completo para predicciones en producción
+    print("Entrenando sobre dataset completo...")
+    full_trainset = data.build_full_trainset()
+    model_full = SVD(random_state=42)
+    model_full.fit(full_trainset)
 
+    # Guardamos en GridFS
+    save_model({"model": model_full, "rmse": round(model_rmse, 4)}, MODEL_NAME)
 
-# =========================
-# TRAIN MODEL
-# =========================
-
-def train_model(data):
-
-    print("\nTraining collaborative filtering model...")
-
-    trainset, testset = train_test_split(
-        data,
-        test_size=0.2,
-        random_state=42
-    )
-
-    # SVD model
-    model = SVD()
-
-    model.fit(trainset)
-
-    predictions = model.test(testset)
-
-    model_rmse = rmse(predictions)
-
-    print(f"\nRMSE: {model_rmse:.4f}")
-
-    return model
-
-
-# =========================
-# GENERATE RECOMMENDATIONS
-# =========================
-
-def recommend_movies_for_user(
-    model,
-    user_id,
-    top_n=10
-):
-
-    print(f"\nGenerating recommendations for user {user_id}...")
-
-    movies_df = load_movies_dataframe()
-
-    ratings_df = load_ratings_dataframe()
-
-    # Movies already rated by user
-    watched_movies = ratings_df[
-        ratings_df["userId"] == user_id
-    ]["movieId"].tolist()
-
-    # Candidate movies
-    candidate_movies = movies_df[
-        ~movies_df["movieId"].isin(watched_movies)
-    ]
-
-    predictions = []
-
-    # Predict ratings
-    for _, movie in candidate_movies.iterrows():
-
-        movie_id = movie["movieId"]
-
-        predicted_rating = model.predict(
-            user_id,
-            movie_id
-        ).est
-
-        predictions.append({
-            "movieId": movie_id,
-            "title": movie["title"],
-            "genres": movie["genres"],
-            "predicted_rating": predicted_rating
-        })
-
-    # Convert to dataframe
-    predictions_df = pd.DataFrame(predictions)
-
-    # Sort predictions
-    predictions_df = predictions_df.sort_values(
-        by="predicted_rating",
-        ascending=False
-    )
-
-    # Top recommendations
-    top_recommendations = predictions_df.head(top_n)
-
-    return top_recommendations
-
-
-# =========================
-# SAVE RECOMMENDATIONS
-# =========================
-
-def save_recommendations(
-    user_id,
-    recommendations_df
-):
-
-    print("\nSaving recommendations into MongoDB...")
-
-    recommendations_collection = get_db()["recommendations"]
-
-    # Remove previous recommendations
-    recommendations_collection.delete_many({
-        "type": "collaborative",
-        "userId": user_id
+    # Guardamos métricas en MongoDB
+    get_db()["model_metrics"].delete_many({"model": "collaborative"})
+    get_db()["model_metrics"].insert_one({
+        "model": "collaborative",
+        "algorithm": "SVD",
+        "rmse": round(model_rmse, 4)
     })
+    print(f"\nEntrenamiento completado. RMSE = {model_rmse:.4f}")
 
-    recommendations_list = []
 
-    for _, row in recommendations_df.iterrows():
+# ── Predicción ────────────────────────────────────────────────────────────────
 
-        recommendations_list.append({
+def predict(user_id: int, top_n: int = 10):
+    print(f"\n=== PREDICCIÓN — Usuario {user_id} ===\n")
+
+    data = load_model(MODEL_NAME)
+    model = data["model"]
+
+    ratings_df = load_ratings()
+    movies_df  = load_movies()
+
+    # Películas ya vistas por el usuario
+    vistas = set(ratings_df[ratings_df["userId"] == user_id]["movieId"].tolist())
+
+    # Predecir sobre todas las no vistas
+    candidatos = movies_df[~movies_df["movieId"].isin(vistas)].copy()
+
+    predicciones = []
+    for _, row in candidatos.iterrows():
+        pred = model.predict(user_id, row["movieId"]).est
+        predicciones.append({
             "movieId": int(row["movieId"]),
-            "title": row["title"],
-            "genres": row["genres"],
-            "predicted_rating": round(
-                row["predicted_rating"],
-                2
-            )
+            "title":   row["title"],
+            "genres":  row["genres"],
+            "predicted_rating": round(pred, 2)
         })
 
-    document = {
+    predicciones.sort(key=lambda x: x["predicted_rating"], reverse=True)
+    top = predicciones[:top_n]
+
+    # Mostrar
+    print(f"Top {top_n} recomendaciones para usuario {user_id}:")
+    for i, r in enumerate(top, 1):
+        print(f"  {i}. {r['title']} | Rating estimado: {r['predicted_rating']:.2f}")
+
+    # Guardar en MongoDB
+    col = get_db()["recommendations"]
+    col.delete_many({"type": "collaborative", "userId": user_id})
+    col.insert_one({
         "type": "collaborative",
         "userId": user_id,
-        "recommendations": recommendations_list
-    }
-
-    recommendations_collection.insert_one(document)
-
-    print("Recommendations saved successfully.")
+        "recommendations": top
+    })
+    print(f"\nRecomendaciones guardadas en MongoDB.")
+    return top
 
 
-# =========================
-# DISPLAY RECOMMENDATIONS
-# =========================
-
-def display_recommendations(
-    user_id,
-    recommendations_df
-):
-
-    print("\n==============================")
-    print(f" RECOMMENDATIONS FOR USER {user_id} ")
-    print("==============================\n")
-
-    for i, (_, row) in enumerate(recommendations_df.iterrows(), start=1):
-
-        print(
-            f"{i}. "
-            f"{row['title']} | "
-            f"Predicted Rating: "
-            f"{row['predicted_rating']:.2f}"
-        )
-
-    print("\n==============================\n")
-
-
-# =========================
-# MAIN
-# =========================
-
-def main():
-
-    USER_ID = 1
-
-    ratings_df = load_ratings_dataframe()
-
-    data = prepare_dataset(ratings_df)
-
-    model = train_model(data)
-
-    recommendations = recommend_movies_for_user(
-        model,
-        USER_ID,
-        top_n=10
-    )
-
-    display_recommendations(
-        USER_ID,
-        recommendations
-    )
-
-    save_recommendations(
-        USER_ID,
-        recommendations
-    )
-
-    print(
-        "\nCollaborative filtering completed successfully."
-    )
-
+# ── CLI ───────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Collaborative Filtering (SVD)")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--train",   action="store_true", help="Entrenar y guardar modelo")
+    group.add_argument("--predict", type=int, metavar="USER_ID", help="Predecir para un usuario")
+    parser.add_argument("--top", type=int, default=10, help="Número de recomendaciones (default: 10)")
+    args = parser.parse_args()
+
+    if args.train:
+        train()
+    else:
+        predict(args.predict, args.top)

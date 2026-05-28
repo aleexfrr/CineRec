@@ -1,6 +1,8 @@
+import sys
 import pandas as pd
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from extract import load_all_datasets
 
 

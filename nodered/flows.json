@@ -16,14 +16,14 @@
   {
     "id": "ui-tab-main",
     "type": "ui_tab",
-    "name": "CineRec",
+    "name": "CineRec Analytics",
     "icon": "dashboard",
     "order": 1
   },
   {
     "id": "ui-group-metrics",
     "type": "ui_group",
-    "name": "System Metrics",
+    "name": "Estadísticas Globales",
     "tab": "ui-tab-main",
     "order": 1,
     "disp": true,
@@ -32,7 +32,7 @@
   {
     "id": "ui-group-popular",
     "type": "ui_group",
-    "name": "Top Popular Movies",
+    "name": "Películas Populares",
     "tab": "ui-tab-main",
     "order": 2,
     "disp": true,
@@ -41,7 +41,7 @@
   {
     "id": "ui-group-collab",
     "type": "ui_group",
-    "name": "Collaborative Filtering",
+    "name": "Filtrado Colaborativo (SVD)",
     "tab": "ui-tab-main",
     "order": 3,
     "disp": true,
@@ -50,7 +50,7 @@
   {
     "id": "ui-group-content",
     "type": "ui_group",
-    "name": "Content-Based",
+    "name": "Filtrado por Contenido (TF-IDF)",
     "tab": "ui-tab-main",
     "order": 4,
     "disp": true,
@@ -59,7 +59,7 @@
   {
     "id": "ui-group-classification",
     "type": "ui_group",
-    "name": "Classification (Random Forest)",
+    "name": "Clasificación (Random Forest)",
     "tab": "ui-tab-main",
     "order": 5,
     "disp": true,
@@ -68,7 +68,7 @@
   {
     "id": "ui-group-evaluation",
     "type": "ui_group",
-    "name": "Model Evaluation",
+    "name": "Métricas de los Modelos",
     "tab": "ui-tab-main",
     "order": 6,
     "disp": true,
@@ -77,7 +77,7 @@
   {
     "id": "ui-group-realtime",
     "type": "ui_group",
-    "name": "Realtime Events (Kafka)",
+    "name": "Eventos en Tiempo Real (Kafka)",
     "tab": "ui-tab-main",
     "order": 7,
     "disp": true,
@@ -87,7 +87,7 @@
     "id": "inject-refresh",
     "type": "inject",
     "z": "tab-dashboard",
-    "name": "Refresh every 30s",
+    "name": "Actualizar cada 30s",
     "repeat": "30",
     "once": true,
     "onceDelay": "2",
@@ -95,349 +95,479 @@
     "payloadType": "json",
     "x": 130,
     "y": 60,
-    "wires": [["split-triggers"]]
+    "wires": [
+      [
+        "split-triggers"
+      ]
+    ]
   },
   {
     "id": "split-triggers",
     "type": "function",
     "z": "tab-dashboard",
-    "name": "Split triggers",
-    "func": "var topics = ['movies','users','ratings','ratings_realtime','recommendations_popular','recommendations_collab','recommendations_content','recommendations_classification','evaluation'];\ntopics.forEach(function(t){\n    node.send({topic: t, payload: {}});\n});\nreturn null;",
+    "name": "Distribuir triggers",
+    "func": "var topics=['movies','users','ratings','ratings_realtime','recommendations_popular','recommendations_collab','recommendations_content','recommendations_classification','evaluation'];\ntopics.forEach(function(t){node.send({topic:t,payload:{}});});\nreturn null;",
     "outputs": 1,
     "x": 330,
     "y": 60,
-    "wires": [["route-query"]]
+    "wires": [
+      [
+        "route-query"
+      ]
+    ]
   },
   {
     "id": "route-query",
     "type": "function",
     "z": "tab-dashboard",
-    "name": "Route to collection",
-    "func": "var t = msg.topic;\nif (t === 'movies') {\n    msg.collection = 'movies';\n    msg.operation = 'find';\n    msg.payload = {};\n} else if (t === 'users') {\n    msg.collection = 'users';\n    msg.operation = 'find';\n    msg.payload = {};\n} else if (t === 'ratings') {\n    msg.collection = 'ratings';\n    msg.operation = 'find';\n    msg.payload = {};\n} else if (t === 'ratings_realtime') {\n    msg.collection = 'ratings_realtime';\n    msg.operation = 'find';\n    msg.payload = {};\n} else if (t === 'recommendations_popular') {\n    msg.collection = 'recommendations';\n    msg.operation = 'find';\n    msg.payload = {type:'popularity'};\n} else if (t === 'recommendations_collab') {\n    msg.collection = 'recommendations';\n    msg.operation = 'find';\n    msg.payload = {type:'collaborative'};\n} else if (t === 'recommendations_content') {\n    msg.collection = 'recommendations';\n    msg.operation = 'find';\n    msg.payload = {type:'content_based'};\n} else if (t === 'recommendations_classification') {\n    msg.collection = 'recommendations';\n    msg.operation = 'find';\n    msg.payload = {type:'classification'};\n} else if (t === 'evaluation') {\n    msg.collection = 'evaluation_results';\n    msg.operation = 'find';\n    msg.payload = {};\n}\nreturn msg;",
+    "name": "Enrutar a colección",
+    "func": "var t=msg.topic;\nif(t==='movies'){msg.collection='movies';msg.operation='count';msg.payload={};}\nelse if(t==='users'){msg.collection='users';msg.operation='count';msg.payload={};}\nelse if(t==='ratings'){msg.collection='ratings';msg.operation='count';msg.payload={};}\nelse if(t==='ratings_realtime'){msg.collection='ratings_realtime';msg.operation='count';msg.payload={};}\nelse if(t==='recommendations_popular'){msg.collection='recommendations';msg.operation='find';msg.payload={type:'popularity'};}\nelse if(t==='recommendations_collab'){msg.collection='recommendations';msg.operation='find';msg.payload={type:'collaborative'};}\nelse if(t==='recommendations_content'){msg.collection='recommendations';msg.operation='find';msg.payload={type:'content_based'};}\nelse if(t==='recommendations_classification'){msg.collection='recommendations';msg.operation='find';msg.payload={type:'classification'};}\nelse if(t==='evaluation'){msg.collection='model_metrics';msg.operation='find';msg.payload={};}\nreturn msg;",
     "outputs": 1,
-    "x": 530,
+    "x": 540,
     "y": 60,
-    "wires": [["mongo-query"]]
+    "wires": [
+      [
+        "mongo-query"
+      ]
+    ]
   },
   {
     "id": "mongo-query",
     "type": "mongodb in",
     "z": "tab-dashboard",
     "mongodb": "mongo-config",
-    "name": "MongoDB Query",
+    "name": "Consulta MongoDB",
     "collection": "",
     "operation": "find",
-    "x": 730,
+    "x": 750,
     "y": 60,
-    "wires": [["route-result"]]
+    "wires": [
+      [
+        "route-result"
+      ]
+    ]
   },
   {
     "id": "route-result",
     "type": "function",
     "z": "tab-dashboard",
-    "name": "Route result",
-    "func": "var t = msg.topic;\nvar out = [null,null,null,null,null,null,null,null,null];\nif (t === 'movies')                        out[0] = msg;\nelse if (t === 'users')                    out[1] = msg;\nelse if (t === 'ratings')                  out[2] = msg;\nelse if (t === 'ratings_realtime')         out[3] = msg;\nelse if (t === 'recommendations_popular')  out[4] = msg;\nelse if (t === 'recommendations_collab')   out[5] = msg;\nelse if (t === 'recommendations_content')  out[6] = msg;\nelse if (t === 'recommendations_classification') out[7] = msg;\nelse if (t === 'evaluation')               out[8] = msg;\nreturn out;",
+    "name": "Distribuir resultados",
+    "func": "var t=msg.topic;\nvar out=[null,null,null,null,null,null,null,null,null];\nif(t==='movies')out[0]=msg;\nelse if(t==='users')out[1]=msg;\nelse if(t==='ratings')out[2]=msg;\nelse if(t==='ratings_realtime')out[3]=msg;\nelse if(t==='recommendations_popular')out[4]=msg;\nelse if(t==='recommendations_collab')out[5]=msg;\nelse if(t==='recommendations_content')out[6]=msg;\nelse if(t==='recommendations_classification')out[7]=msg;\nelse if(t==='evaluation')out[8]=msg;\nreturn out;",
     "outputs": 9,
-    "x": 930,
+    "x": 960,
     "y": 60,
     "wires": [
-      ["format-count-movies"],
-      ["format-count-users"],
-      ["format-count-ratings"],
-      ["format-count-realtime"],
-      ["format-popular"],
-      ["format-collab"],
-      ["format-content"],
-      ["format-classification"],
-      ["format-evaluation"]
+      [
+        "fmt-movies"
+      ],
+      [
+        "fmt-users"
+      ],
+      [
+        "fmt-ratings"
+      ],
+      [
+        "fmt-realtime-cnt"
+      ],
+      [
+        "fmt-popular"
+      ],
+      [
+        "fmt-collab"
+      ],
+      [
+        "fmt-content"
+      ],
+      [
+        "fmt-classification"
+      ],
+      [
+        "fmt-evaluation"
+      ]
     ]
   },
   {
-    "id": "format-count-movies",
+    "id": "fmt-movies",
     "type": "function",
     "z": "tab-dashboard",
     "name": "Count Movies",
-    "func": "msg.payload = Array.isArray(msg.payload) ? msg.payload.length : msg.payload;\nreturn msg;",
-    "x": 1150,
+    "func": "msg.payload=typeof msg.payload==='number'?msg.payload:(Array.isArray(msg.payload)?msg.payload.length:0);\nreturn msg;",
+    "x": 1190,
     "y": 120,
-    "wires": [["ui-text-movies"]]
+    "wires": [
+      [
+        "stat-movies"
+      ]
+    ]
   },
   {
-    "id": "format-count-users",
+    "id": "fmt-users",
     "type": "function",
     "z": "tab-dashboard",
     "name": "Count Users",
-    "func": "msg.payload = Array.isArray(msg.payload) ? msg.payload.length : msg.payload;\nreturn msg;",
-    "x": 1150,
-    "y": 180,
-    "wires": [["ui-text-users"]]
+    "func": "msg.payload=typeof msg.payload==='number'?msg.payload:(Array.isArray(msg.payload)?msg.payload.length:0);\nreturn msg;",
+    "x": 1190,
+    "y": 165,
+    "wires": [
+      [
+        "stat-users"
+      ]
+    ]
   },
   {
-    "id": "format-count-ratings",
+    "id": "fmt-ratings",
     "type": "function",
     "z": "tab-dashboard",
     "name": "Count Ratings",
-    "func": "msg.payload = Array.isArray(msg.payload) ? msg.payload.length : msg.payload;\nreturn msg;",
-    "x": 1150,
-    "y": 240,
-    "wires": [["ui-text-ratings"]]
+    "func": "msg.payload=typeof msg.payload==='number'?msg.payload:(Array.isArray(msg.payload)?msg.payload.length:0);\nreturn msg;",
+    "x": 1190,
+    "y": 210,
+    "wires": [
+      [
+        "stat-ratings"
+      ]
+    ]
   },
   {
-    "id": "format-count-realtime",
+    "id": "fmt-realtime-cnt",
     "type": "function",
     "z": "tab-dashboard",
     "name": "Count Realtime",
-    "func": "msg.payload = Array.isArray(msg.payload) ? msg.payload.length : msg.payload;\nreturn msg;",
-    "x": 1150,
-    "y": 300,
-    "wires": [["ui-text-realtime-count"]]
+    "func": "msg.payload=typeof msg.payload==='number'?msg.payload:(Array.isArray(msg.payload)?msg.payload.length:0);\nreturn msg;",
+    "x": 1190,
+    "y": 255,
+    "wires": [
+      [
+        "stat-realtime"
+      ]
+    ]
   },
   {
-    "id": "ui-text-movies",
-    "type": "ui_text",
+    "id": "stat-movies",
+    "type": "ui_template",
     "z": "tab-dashboard",
     "group": "ui-group-metrics",
     "order": 1,
-    "width": "4",
-    "height": "2",
-    "label": "🎬 Total Movies",
-    "format": "{{msg.payload}}",
-    "layout": "col-center",
-    "x": 1150,
+    "width": "6",
+    "height": "3",
+    "format": "<div style=\"height:100%;display:flex;align-items:center;justify-content:center;background:#1a1a35;border-radius:8px;border:1px solid #2a2a50;\"><div style=\"text-align:center;\"><div style=\"font-size:2.4em;font-weight:700;color:#f5c518;line-height:1;\">{{msg.payload}}</div><div style=\"color:#a0a0c0;font-size:11px;margin-top:8px;text-transform:uppercase;letter-spacing:1px;\">🎬 Películas</div></div></div>",
+    "storeOutMessages": true,
+    "fwdInMessages": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "x": 1420,
     "y": 120,
-    "wires": []
+    "wires": [
+      []
+    ]
   },
   {
-    "id": "ui-text-users",
-    "type": "ui_text",
+    "id": "stat-users",
+    "type": "ui_template",
     "z": "tab-dashboard",
     "group": "ui-group-metrics",
     "order": 2,
-    "width": "4",
-    "height": "2",
-    "label": "👤 Total Users",
-    "format": "{{msg.payload}}",
-    "layout": "col-center",
-    "x": 1150,
-    "y": 180,
-    "wires": []
+    "width": "6",
+    "height": "3",
+    "format": "<div style=\"height:100%;display:flex;align-items:center;justify-content:center;background:#1a1a35;border-radius:8px;border:1px solid #2a2a50;\"><div style=\"text-align:center;\"><div style=\"font-size:2.4em;font-weight:700;color:#f5c518;line-height:1;\">{{msg.payload}}</div><div style=\"color:#a0a0c0;font-size:11px;margin-top:8px;text-transform:uppercase;letter-spacing:1px;\">👤 Usuarios</div></div></div>",
+    "storeOutMessages": true,
+    "fwdInMessages": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "x": 1420,
+    "y": 165,
+    "wires": [
+      []
+    ]
   },
   {
-    "id": "ui-text-ratings",
-    "type": "ui_text",
+    "id": "stat-ratings",
+    "type": "ui_template",
     "z": "tab-dashboard",
     "group": "ui-group-metrics",
     "order": 3,
-    "width": "4",
-    "height": "2",
-    "label": "⭐ Total Ratings",
-    "format": "{{msg.payload}}",
-    "layout": "col-center",
-    "x": 1150,
-    "y": 240,
-    "wires": []
+    "width": "6",
+    "height": "3",
+    "format": "<div style=\"height:100%;display:flex;align-items:center;justify-content:center;background:#1a1a35;border-radius:8px;border:1px solid #2a2a50;\"><div style=\"text-align:center;\"><div style=\"font-size:2.4em;font-weight:700;color:#f5c518;line-height:1;\">{{msg.payload}}</div><div style=\"color:#a0a0c0;font-size:11px;margin-top:8px;text-transform:uppercase;letter-spacing:1px;\">⭐ Valoraciones</div></div></div>",
+    "storeOutMessages": true,
+    "fwdInMessages": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "x": 1420,
+    "y": 210,
+    "wires": [
+      []
+    ]
   },
   {
-    "id": "ui-text-realtime-count",
-    "type": "ui_text",
+    "id": "stat-realtime",
+    "type": "ui_template",
     "z": "tab-dashboard",
     "group": "ui-group-metrics",
     "order": 4,
-    "width": "4",
-    "height": "2",
-    "label": "🔴 Realtime Events",
-    "format": "{{msg.payload}}",
-    "layout": "col-center",
-    "x": 1150,
-    "y": 300,
-    "wires": []
+    "width": "6",
+    "height": "3",
+    "format": "<div style=\"height:100%;display:flex;align-items:center;justify-content:center;background:#1a1a35;border-radius:8px;border:1px solid #2a2a50;\"><div style=\"text-align:center;\"><div style=\"font-size:2.4em;font-weight:700;color:#e05555;line-height:1;\">{{msg.payload}}</div><div style=\"color:#a0a0c0;font-size:11px;margin-top:8px;text-transform:uppercase;letter-spacing:1px;\">🔴 Eventos Kafka</div></div></div>",
+    "storeOutMessages": true,
+    "fwdInMessages": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "x": 1420,
+    "y": 255,
+    "wires": [
+      []
+    ]
   },
   {
-    "id": "format-popular",
+    "id": "fmt-popular",
     "type": "function",
     "z": "tab-dashboard",
-    "name": "Format Popular",
-    "func": "var rows = msg.payload.sort(function(a,b){ return b.average_rating - a.average_rating; }).slice(0,10);\nvar html = '<table style=\"width:100%;border-collapse:collapse;font-size:13px\">';\nhtml += '<tr style=\"background:#1a1a2e;color:#e0e0e0\"><th style=\"padding:6px;text-align:left\">Title</th><th>Avg Rating</th><th>Votes</th></tr>';\nrows.forEach(function(r,i){\n    var bg = i%2===0?'#16213e':'#0f3460';\n    html += '<tr style=\"background:'+bg+';color:#e0e0e0\"><td style=\"padding:5px\">'+r.title+'</td><td style=\"text-align:center\">'+r.average_rating.toFixed(2)+'</td><td style=\"text-align:center\">'+r.rating_count+'</td></tr>';\n});\nhtml += '</table>';\nmsg.payload = html;\nreturn msg;",
-    "x": 1150,
-    "y": 380,
-    "wires": [["ui-template-popular"]]
+    "name": "Fmt Popular",
+    "func": "var rows=(msg.payload||[]).sort(function(a,b){return(b.average_rating||0)-(a.average_rating||0);}).slice(0,10);\nmsg.payload=rows.map(function(r){var v=parseFloat(r.average_rating)||0;return{title:r.title||'Sin título',rating:v.toFixed(2),pct:Math.round(v/5*100),votes:r.rating_count||0};});\nreturn msg;",
+    "x": 1190,
+    "y": 340,
+    "wires": [
+      [
+        "tmpl-popular"
+      ]
+    ]
   },
   {
-    "id": "ui-template-popular",
+    "id": "tmpl-popular",
     "type": "ui_template",
     "z": "tab-dashboard",
     "group": "ui-group-popular",
     "order": 1,
     "width": "12",
-    "height": "8",
-    "format": "<div ng-bind-html=\"msg.payload\"></div>",
+    "height": "10",
+    "format": "<style>.cr{display:flex;align-items:center;padding:7px 10px;border-bottom:1px solid #1a1a35;gap:8px}.cr:nth-child(odd){background:#0a0a1a}.cr:nth-child(even){background:#12122a}.crn{color:#a0a0c0;font-size:11px;min-width:18px;text-align:right;flex-shrink:0}.crt{flex:1;color:#f0f0f0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.crb{width:60px;background:#2a2a50;border-radius:3px;height:5px;flex-shrink:0}.crbf{height:5px;border-radius:3px;background:#f5c518}.crs{color:#f5c518;font-weight:700;font-size:13px;min-width:38px;text-align:right;flex-shrink:0}.crm{color:#a0a0c0;font-size:11px;min-width:55px;text-align:right;flex-shrink:0}</style><div style=\"background:#12122a;border-radius:8px;overflow:hidden;border:1px solid #2a2a50;\"><div style=\"padding:10px 12px;background:#1a1a35;color:#f5c518;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #2a2a50;\">Top 10 — ordenadas por valoración media</div><div ng-repeat=\"item in msg.payload track by $index\" class=\"cr\"><span class=\"crn\">{{$index+1}}</span><span class=\"crt\" title=\"{{item.title}}\">{{item.title}}</span><div class=\"crb\"><div class=\"crbf\" ng-style=\"{'width':item.pct+'%'}\"></div></div><span class=\"crs\">{{item.rating}}</span><span class=\"crm\">{{item.votes}} votos</span></div><div ng-if=\"!msg.payload||!msg.payload.length\" style=\"padding:24px;color:#a0a0c0;text-align:center;\">Sin datos — ejecuta el recomendador de popularidad</div></div>",
     "storeOutMessages": true,
     "fwdInMessages": true,
     "resendOnRefresh": true,
     "templateScope": "local",
-    "x": 1350,
-    "y": 380,
-    "wires": [[]]
+    "x": 1420,
+    "y": 340,
+    "wires": [
+      []
+    ]
   },
   {
-    "id": "format-collab",
+    "id": "fmt-collab",
     "type": "function",
     "z": "tab-dashboard",
-    "name": "Format Collab",
-    "func": "var docs = msg.payload;\nif (!docs.length) { msg.payload = '<p style=\"color:#aaa\">No data yet</p>'; return msg; }\nvar doc = docs[docs.length-1];\nvar rows = doc.recommendations || [];\nvar html = '<p style=\"color:#a0a0c0;margin-bottom:6px\">User ID: <b>'+doc.userId+'</b></p>';\nhtml += '<table style=\"width:100%;border-collapse:collapse;font-size:13px\"><tr style=\"background:#1a1a2e;color:#e0e0e0\"><th style=\"padding:6px;text-align:left\">Title</th><th>Predicted Rating</th></tr>';\nrows.forEach(function(r,i){\n    var bg = i%2===0?'#16213e':'#0f3460';\n    html += '<tr style=\"background:'+bg+';color:#e0e0e0\"><td style=\"padding:5px\">'+r.title+'</td><td style=\"text-align:center\">'+r.predicted_rating.toFixed(2)+'</td></tr>';\n});\nhtml += '</table>';\nmsg.payload = html;\nreturn msg;",
-    "x": 1150,
-    "y": 460,
-    "wires": [["ui-template-collab"]]
+    "name": "Fmt Collab",
+    "func": "var docs=msg.payload;\nif(!docs||!docs.length){msg.payload={header:'—',items:[]};return msg;}\nvar doc=docs[docs.length-1];\nvar items=(doc.recommendations||[]).map(function(r){var v=parseFloat(r.predicted_rating)||0;return{title:r.title,score:v.toFixed(2),pct:Math.round(v/5*100)};});\nmsg.payload={header:String(doc.userId||'—'),items:items};\nreturn msg;",
+    "x": 1190,
+    "y": 420,
+    "wires": [
+      [
+        "tmpl-collab"
+      ]
+    ]
   },
   {
-    "id": "ui-template-collab",
+    "id": "tmpl-collab",
     "type": "ui_template",
     "z": "tab-dashboard",
     "group": "ui-group-collab",
     "order": 1,
     "width": "12",
-    "height": "8",
-    "format": "<div ng-bind-html=\"msg.payload\"></div>",
+    "height": "10",
+    "format": "<style>.cr{display:flex;align-items:center;padding:7px 10px;border-bottom:1px solid #1a1a35;gap:8px}.cr:nth-child(odd){background:#0a0a1a}.cr:nth-child(even){background:#12122a}.crn{color:#a0a0c0;font-size:11px;min-width:18px;text-align:right;flex-shrink:0}.crt{flex:1;color:#f0f0f0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.crb{width:60px;background:#2a2a50;border-radius:3px;height:5px;flex-shrink:0}.crbf{height:5px;border-radius:3px;background:#f5c518}.crs{color:#f5c518;font-weight:700;font-size:13px;min-width:38px;text-align:right;flex-shrink:0}</style><div style=\"background:#12122a;border-radius:8px;overflow:hidden;border:1px solid #2a2a50;\"><div style=\"padding:10px 12px;background:#1a1a35;border-bottom:1px solid #2a2a50;display:flex;align-items:center;justify-content:space-between;\"><span style=\"color:#f5c518;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;\">SVD — Rating predicho (/5)</span><span style=\"color:#a0a0c0;font-size:11px;\">Usuario: <b style='color:#f5c518'>{{msg.payload.header}}</b></span></div><div ng-repeat=\"item in msg.payload.items track by $index\" class=\"cr\"><span class=\"crn\">{{$index+1}}</span><span class=\"crt\" title=\"{{item.title}}\">{{item.title}}</span><div class=\"crb\"><div class=\"crbf\" ng-style=\"{'width':item.pct+'%'}\"></div></div><span class=\"crs\">{{item.score}}</span></div><div ng-if=\"!msg.payload.items||!msg.payload.items.length\" style=\"padding:24px;color:#a0a0c0;text-align:center;\">Sin datos — ejecuta: python -m recommender.collaborative --predict USER_ID</div></div>",
     "storeOutMessages": true,
     "fwdInMessages": true,
     "resendOnRefresh": true,
     "templateScope": "local",
-    "x": 1350,
-    "y": 460,
-    "wires": [[]]
+    "x": 1420,
+    "y": 420,
+    "wires": [
+      []
+    ]
   },
   {
-    "id": "format-content",
+    "id": "fmt-content",
     "type": "function",
     "z": "tab-dashboard",
-    "name": "Format Content",
-    "func": "var docs = msg.payload;\nif (!docs.length) { msg.payload = '<p style=\"color:#aaa\">No data yet</p>'; return msg; }\nvar doc = docs[docs.length-1];\nvar rows = doc.recommendations || [];\nvar html = '<p style=\"color:#a0a0c0;margin-bottom:6px\">Based on: <b>'+doc.source_movie+'</b></p>';\nhtml += '<table style=\"width:100%;border-collapse:collapse;font-size:13px\"><tr style=\"background:#1a1a2e;color:#e0e0e0\"><th style=\"padding:6px;text-align:left\">Title</th><th>Similarity</th></tr>';\nrows.forEach(function(r,i){\n    var bg = i%2===0?'#16213e':'#0f3460';\n    html += '<tr style=\"background:'+bg+';color:#e0e0e0\"><td style=\"padding:5px\">'+r.title+'</td><td style=\"text-align:center\">'+r.similarity_score.toFixed(4)+'</td></tr>';\n});\nhtml += '</table>';\nmsg.payload = html;\nreturn msg;",
-    "x": 1150,
-    "y": 540,
-    "wires": [["ui-template-content"]]
+    "name": "Fmt Content",
+    "func": "var docs=msg.payload;\nif(!docs||!docs.length){msg.payload={header:'—',items:[]};return msg;}\nvar doc=docs[docs.length-1];\nvar items=(doc.recommendations||[]).map(function(r){var v=parseFloat(r.similarity_score)||0;return{title:r.title,score:(v*100).toFixed(1)+'%',pct:Math.round(v*100)};});\nmsg.payload={header:String(doc.userId||'—'),items:items};\nreturn msg;",
+    "x": 1190,
+    "y": 500,
+    "wires": [
+      [
+        "tmpl-content"
+      ]
+    ]
   },
   {
-    "id": "ui-template-content",
+    "id": "tmpl-content",
     "type": "ui_template",
     "z": "tab-dashboard",
     "group": "ui-group-content",
     "order": 1,
     "width": "12",
-    "height": "8",
-    "format": "<div ng-bind-html=\"msg.payload\"></div>",
+    "height": "10",
+    "format": "<style>.crbfg{height:5px;border-radius:3px;background:#4caf7d}.crsg{color:#4caf7d;font-weight:700;font-size:13px;min-width:44px;text-align:right;flex-shrink:0}</style><div style=\"background:#12122a;border-radius:8px;overflow:hidden;border:1px solid #2a2a50;\"><div style=\"padding:10px 12px;background:#1a1a35;border-bottom:1px solid #2a2a50;display:flex;align-items:center;justify-content:space-between;\"><span style=\"color:#f5c518;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;\">TF-IDF — Similitud de contenido</span><span style=\"color:#a0a0c0;font-size:11px;\">Usuario: <b style='color:#f5c518'>{{msg.payload.header}}</b></span></div><div ng-repeat=\"item in msg.payload.items track by $index\" ng-style=\"{'background':$index%2===0?'#0a0a1a':'#12122a'}\" style=\"display:flex;align-items:center;padding:7px 10px;border-bottom:1px solid #1a1a35;gap:8px;\"><span style=\"color:#a0a0c0;font-size:11px;min-width:18px;text-align:right;flex-shrink:0;\">{{$index+1}}</span><span style=\"flex:1;color:#f0f0f0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\" title=\"{{item.title}}\">{{item.title}}</span><div style=\"width:60px;background:#2a2a50;border-radius:3px;height:5px;flex-shrink:0;\"><div class=\"crbfg\" ng-style=\"{'width':item.pct+'%'}\"></div></div><span class=\"crsg\">{{item.score}}</span></div><div ng-if=\"!msg.payload.items||!msg.payload.items.length\" style=\"padding:24px;color:#a0a0c0;text-align:center;\">Sin datos — ejecuta: python -m recommender.content_based --predict USER_ID</div></div>",
     "storeOutMessages": true,
     "fwdInMessages": true,
     "resendOnRefresh": true,
     "templateScope": "local",
-    "x": 1350,
-    "y": 540,
-    "wires": [[]]
+    "x": 1420,
+    "y": 500,
+    "wires": [
+      []
+    ]
   },
   {
-    "id": "format-classification",
+    "id": "fmt-classification",
     "type": "function",
     "z": "tab-dashboard",
-    "name": "Format Classification",
-    "func": "var docs = msg.payload;\nif (!docs.length) { msg.payload = '<p style=\"color:#aaa\">No data yet</p>'; return msg; }\nvar doc = docs[docs.length-1];\nvar rows = doc.recommendations || [];\nvar html = '<p style=\"color:#a0a0c0;margin-bottom:6px\">User ID: <b>'+doc.userId+'</b></p>';\nhtml += '<table style=\"width:100%;border-collapse:collapse;font-size:13px\"><tr style=\"background:#1a1a2e;color:#e0e0e0\"><th style=\"padding:6px;text-align:left\">Title</th><th>Like Probability</th></tr>';\nrows.forEach(function(r,i){\n    var bg = i%2===0?'#16213e':'#0f3460';\n    html += '<tr style=\"background:'+bg+';color:#e0e0e0\"><td style=\"padding:5px\">'+r.title+'</td><td style=\"text-align:center\">'+((r.like_probability*100).toFixed(1))+'%</td></tr>';\n});\nhtml += '</table>';\nmsg.payload = html;\nreturn msg;",
-    "x": 1150,
-    "y": 620,
-    "wires": [["ui-template-classification"]]
+    "name": "Fmt Classification",
+    "func": "var docs=msg.payload;\nif(!docs||!docs.length){msg.payload={header:'—',items:[]};return msg;}\nvar doc=docs[docs.length-1];\nvar items=(doc.recommendations||[]).map(function(r){var v=parseFloat(r.like_probability)||0;return{title:r.title,score:(v*100).toFixed(1)+'%',pct:Math.round(v*100)};});\nmsg.payload={header:String(doc.userId||'—'),items:items};\nreturn msg;",
+    "x": 1190,
+    "y": 580,
+    "wires": [
+      [
+        "tmpl-classification"
+      ]
+    ]
   },
   {
-    "id": "ui-template-classification",
+    "id": "tmpl-classification",
     "type": "ui_template",
     "z": "tab-dashboard",
     "group": "ui-group-classification",
     "order": 1,
     "width": "12",
-    "height": "8",
-    "format": "<div ng-bind-html=\"msg.payload\"></div>",
+    "height": "10",
+    "format": "<style>.crbfp{height:5px;border-radius:3px;background:#9b59b6}.crsp{color:#c39bd3;font-weight:700;font-size:13px;min-width:44px;text-align:right;flex-shrink:0}</style><div style=\"background:#12122a;border-radius:8px;overflow:hidden;border:1px solid #2a2a50;\"><div style=\"padding:10px 12px;background:#1a1a35;border-bottom:1px solid #2a2a50;display:flex;align-items:center;justify-content:space-between;\"><span style=\"color:#f5c518;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;\">Random Forest — P(le gusta)</span><span style=\"color:#a0a0c0;font-size:11px;\">Usuario: <b style='color:#f5c518'>{{msg.payload.header}}</b></span></div><div ng-repeat=\"item in msg.payload.items track by $index\" ng-style=\"{'background':$index%2===0?'#0a0a1a':'#12122a'}\" style=\"display:flex;align-items:center;padding:7px 10px;border-bottom:1px solid #1a1a35;gap:8px;\"><span style=\"color:#a0a0c0;font-size:11px;min-width:18px;text-align:right;flex-shrink:0;\">{{$index+1}}</span><span style=\"flex:1;color:#f0f0f0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\" title=\"{{item.title}}\">{{item.title}}</span><div style=\"width:60px;background:#2a2a50;border-radius:3px;height:5px;flex-shrink:0;\"><div class=\"crbfp\" ng-style=\"{'width':item.pct+'%'}\"></div></div><span class=\"crsp\">{{item.score}}</span></div><div ng-if=\"!msg.payload.items||!msg.payload.items.length\" style=\"padding:24px;color:#a0a0c0;text-align:center;\">Sin datos — ejecuta: python -m recommender.classification --predict USER_ID</div></div>",
     "storeOutMessages": true,
     "fwdInMessages": true,
     "resendOnRefresh": true,
     "templateScope": "local",
-    "x": 1350,
-    "y": 620,
-    "wires": [[]]
+    "x": 1420,
+    "y": 580,
+    "wires": [
+      []
+    ]
   },
   {
-    "id": "format-evaluation",
+    "id": "fmt-evaluation",
     "type": "function",
     "z": "tab-dashboard",
-    "name": "Format Evaluation",
-    "func": "var rows = msg.payload;\nif (!rows.length) { msg.payload = '<p style=\"color:#aaa\">No data yet. Run evaluation.py first.</p>'; return msg; }\nvar html = '<table style=\"width:100%;border-collapse:collapse;font-size:13px\"><tr style=\"background:#1a1a2e;color:#e0e0e0\"><th style=\"padding:8px;text-align:left\">Model</th><th style=\"text-align:center\">Precision@10</th><th style=\"text-align:center\">Recall@10</th><th style=\"text-align:center\">NDCG@10</th></tr>';\nrows.forEach(function(r,i){\n    var bg = i%2===0?'#16213e':'#0f3460';\n    html += '<tr style=\"background:'+bg+';color:#e0e0e0\"><td style=\"padding:6px\"><b>'+r.model+'</b></td><td style=\"text-align:center\">'+r.precision_at_10+'</td><td style=\"text-align:center\">'+r.recall_at_10+'</td><td style=\"text-align:center\">'+r.ndcg_at_10+'</td></tr>';\n});\nhtml += '</table>';\nmsg.payload = html;\nreturn msg;",
-    "x": 1150,
-    "y": 700,
-    "wires": [["ui-template-evaluation"]]
+    "name": "Fmt Evaluation",
+    "func": "var rows=msg.payload;\nif(!rows||!rows.length){msg.payload=[];return msg;}\nmsg.payload=rows.map(function(r){\n  var m=[];\n  if(r.rmse!=null)m.push({key:'RMSE',val:parseFloat(r.rmse).toFixed(4),good:parseFloat(r.rmse)<1.0,note:'menor=mejor'});\n  if(r.accuracy!=null)m.push({key:'Accuracy',val:(parseFloat(r.accuracy)*100).toFixed(1)+'%',good:parseFloat(r.accuracy)>0.6,note:''});\n  if(r.precision!=null)m.push({key:'Precision',val:(parseFloat(r.precision)*100).toFixed(1)+'%',good:parseFloat(r.precision)>0.6,note:''});\n  if(r.recall!=null)m.push({key:'Recall',val:(parseFloat(r.recall)*100).toFixed(1)+'%',good:parseFloat(r.recall)>0.7,note:''});\n  if(r.f1_score!=null)m.push({key:'F1',val:(parseFloat(r.f1_score)*100).toFixed(1)+'%',good:parseFloat(r.f1_score)>0.6,note:''});\n  return{model:(r.model||'').toUpperCase(),algorithm:r.algorithm||'',metrics:m};\n});\nreturn msg;",
+    "x": 1190,
+    "y": 660,
+    "wires": [
+      [
+        "tmpl-evaluation"
+      ]
+    ]
   },
   {
-    "id": "ui-template-evaluation",
+    "id": "tmpl-evaluation",
     "type": "ui_template",
     "z": "tab-dashboard",
     "group": "ui-group-evaluation",
     "order": 1,
     "width": "24",
-    "height": "6",
-    "format": "<div ng-bind-html=\"msg.payload\"></div>",
+    "height": "9",
+    "format": "<div style=\"background:#12122a;border-radius:8px;overflow:hidden;border:1px solid #2a2a50;\"><div style=\"padding:10px 14px;background:#1a1a35;color:#f5c518;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #2a2a50;\">Métricas de evaluación — comparativa de modelos ML</div><div ng-repeat=\"model in msg.payload track by $index\" style=\"padding:14px 16px;border-bottom:1px solid #2a2a50;\"><div style=\"color:#f5c518;font-weight:700;font-size:14px;margin-bottom:10px;\">{{model.model}} <span style=\"color:#a0a0c0;font-size:11px;font-weight:normal;margin-left:6px;\">{{model.algorithm}}</span></div><div style=\"display:flex;flex-wrap:wrap;gap:10px;\"><div ng-repeat=\"m in model.metrics track by $index\" ng-style=\"{'border-color':m.good?'#4caf7d':'#2a2a50'}\" style=\"background:#1a1a35;border-radius:8px;padding:10px 16px;border:1px solid;min-width:90px;text-align:center;\"><div ng-style=\"{'color':m.good?'#4caf7d':'#f5c518'}\" style=\"font-size:1.5em;font-weight:700;line-height:1;\">{{m.val}}</div><div style=\"color:#a0a0c0;font-size:10px;margin-top:5px;text-transform:uppercase;letter-spacing:0.5px;\">{{m.key}}</div><div ng-if=\"m.note\" style=\"color:#a0a0c0;font-size:9px;margin-top:2px;\">{{m.note}}</div></div></div></div><div ng-if=\"!msg.payload||!msg.payload.length\" style=\"padding:24px;color:#a0a0c0;text-align:center;\">Sin datos — entrena los modelos primero con --train</div></div>",
     "storeOutMessages": true,
     "fwdInMessages": true,
     "resendOnRefresh": true,
     "templateScope": "local",
-    "x": 1350,
-    "y": 700,
-    "wires": [[]]
-  },
-  {
-    "id": "query-realtime-events",
-    "type": "mongodb in",
-    "z": "tab-dashboard",
-    "mongodb": "mongo-config",
-    "name": "Realtime Events",
-    "collection": "ratings_realtime",
-    "operation": "find",
-    "x": 330,
-    "y": 800,
-    "wires": [["format-realtime"]]
+    "x": 1420,
+    "y": 660,
+    "wires": [
+      []
+    ]
   },
   {
     "id": "inject-realtime",
     "type": "inject",
     "z": "tab-dashboard",
-    "name": "Refresh realtime 10s",
+    "name": "Actualizar cada 10s",
     "repeat": "10",
     "once": true,
     "onceDelay": "3",
     "payload": "{}",
     "payloadType": "json",
     "x": 130,
-    "y": 800,
-    "wires": [["query-realtime-events"]]
+    "y": 820,
+    "wires": [
+      [
+        "query-realtime-events"
+      ]
+    ]
   },
   {
-    "id": "format-realtime",
+    "id": "query-realtime-events",
+    "type": "mongodb in",
+    "z": "tab-dashboard",
+    "mongodb": "mongo-config",
+    "name": "Eventos Realtime",
+    "collection": "ratings_realtime",
+    "operation": "find",
+    "x": 340,
+    "y": 820,
+    "wires": [
+      [
+        "fmt-realtime"
+      ]
+    ]
+  },
+  {
+    "id": "fmt-realtime",
     "type": "function",
     "z": "tab-dashboard",
-    "name": "Format Realtime",
-    "func": "var rows = msg.payload.slice(-20).reverse();\nif (!rows.length) { msg.payload = '<p style=\"color:#aaa\">No realtime events yet. Run ratings_producer.py first.</p>'; return msg; }\nvar html = '<table style=\"width:100%;border-collapse:collapse;font-size:13px\"><tr style=\"background:#1a1a2e;color:#e0e0e0\"><th style=\"padding:6px\">User ID</th><th>Movie ID</th><th>Rating</th><th>Timestamp</th></tr>';\nrows.forEach(function(r,i){\n    var bg = i%2===0?'#16213e':'#0f3460';\n    html += '<tr style=\"background:'+bg+';color:#e0e0e0\"><td style=\"text-align:center;padding:5px\">'+r.userId+'</td><td style=\"text-align:center\">'+r.movieId+'</td><td style=\"text-align:center\">'+r.rating+'</td><td style=\"text-align:center\">'+r.timestamp+'</td></tr>';\n});\nhtml += '</table>';\nmsg.payload = html;\nreturn msg;",
-    "x": 530,
-    "y": 800,
-    "wires": [["ui-template-realtime"]]
+    "name": "Fmt Realtime",
+    "func": "var all=msg.payload||[];\nvar recent=all.slice(-20).reverse();\nvar avgRating=0;\nif(recent.length){\n  avgRating=recent.reduce(function(s,r){return s+(parseFloat(r.rating)||0);},0)/recent.length;\n}\nvar events=recent.map(function(r){\n  var ts=r.timestamp||r.ts||'';\n  if(ts&&typeof ts==='string'&&ts.length>16)ts=ts.substring(0,16).replace('T',' ');\n  var rating=parseFloat(r.rating)||0;\n  return{\n    userId:r.userId||r.user_id||'?',\n    movieId:r.movieId||r.movie_id||'?',\n    rating:rating.toFixed(1),\n    pct:Math.round(rating/5*100),\n    ts:ts\n  };\n});\nmsg.payload={stats:{total:all.length,avg:avgRating.toFixed(2)},events:events};\nreturn msg;",
+    "x": 560,
+    "y": 820,
+    "wires": [
+      [
+        "tmpl-realtime"
+      ]
+    ]
   },
   {
-    "id": "ui-template-realtime",
+    "id": "tmpl-realtime",
     "type": "ui_template",
     "z": "tab-dashboard",
     "group": "ui-group-realtime",
     "order": 1,
     "width": "24",
-    "height": "8",
-    "format": "<div ng-bind-html=\"msg.payload\"></div>",
+    "height": 10,
+    "format": "<style>.kfh{padding:10px 14px;background:#1a1a35;border-bottom:1px solid #2a2a50;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}.kft{color:#f5c518;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;display:flex;align-items:center;gap:8px;}.kfd{width:8px;height:8px;border-radius:50%;background:#4caf7d;animation:kfp 1.5s ease-in-out infinite;}@keyframes kfp{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.45;transform:scale(1.5);}}.kfs{display:flex;gap:20px;}.kfst{text-align:center;}.kfsv{color:#f5c518;font-weight:700;font-size:14px;line-height:1;}.kfsl{color:#a0a0c0;font-size:9px;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;}.kfr{display:flex;align-items:center;padding:9px 12px;border-bottom:1px solid #1a1a35;gap:12px;}.kfu{background:#1a1a35;border:1px solid #2a2a50;border-radius:4px;padding:3px 8px;color:#f5c518;font-size:12px;font-weight:700;flex-shrink:0;min-width:52px;text-align:center;}.kfa{color:#2a2a50;font-size:14px;flex-shrink:0;}.kfm{color:#a0a0c0;font-size:12px;flex-shrink:0;}.kfmb{color:#f0f0f0;}.kfbar{background:#2a2a50;border-radius:3px;height:5px;width:60px;flex-shrink:0;}.kfbf{height:5px;border-radius:3px;background:#f5c518;}.kfv{color:#f5c518;font-weight:700;font-size:13px;flex-shrink:0;min-width:42px;text-align:right;}.kfts{flex:1;text-align:right;color:#a0a0c0;font-size:11px;}</style><div style=\"background:#12122a;border-radius:8px;overflow:hidden;border:1px solid #2a2a50;\"><div class=\"kfh\"><div class=\"kft\"><div class=\"kfd\"></div>Kafka → MongoDB · Valoraciones en tiempo real</div><div class=\"kfs\"><div class=\"kfst\"><div class=\"kfsv\">{{msg.payload.stats.total}}</div><div class=\"kfsl\">eventos</div></div><div class=\"kfst\"><div class=\"kfsv\">{{msg.payload.stats.avg}} ★</div><div class=\"kfsl\">media últimos 20</div></div><div class=\"kfst\"><div style=\"color:#a0a0c0;font-size:10px;margin-top:4px;\">actualiz. cada 10 s</div></div></div></div><div ng-repeat=\"item in msg.payload.events track by $index\" ng-style=\"{'background':$index%2===0?'#0a0a1a':'#12122a'}\" class=\"kfr\"><div class=\"kfu\">U‑{{item.userId}}</div><span class=\"kfa\">→</span><div class=\"kfm\">película <span class=\"kfmb\">{{item.movieId}}</span></div><div class=\"kfbar\"><div class=\"kfbf\" ng-style=\"{'width':item.pct+'%'}\"></div></div><div class=\"kfv\">{{item.rating}} ★</div><div class=\"kfts\">{{item.ts}}</div></div><div ng-if=\"!msg.payload.events||!msg.payload.events.length\" style=\"padding:32px;color:#a0a0c0;text-align:center;\"><div style=\"font-size:2em;margin-bottom:8px;\">📡</div><div>Sin eventos aún — inicia el productor Kafka:</div><div style=\"margin-top:8px;color:#f5c518;font-family:monospace;font-size:12px;\">python streaming/producer/ratings_producer.py</div></div></div>",
     "storeOutMessages": true,
     "fwdInMessages": true,
     "resendOnRefresh": true,
     "templateScope": "local",
-    "x": 730,
-    "y": 800,
-    "wires": [[]]
+    "x": 760,
+    "y": 820,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "global-dark-theme",
+    "type": "ui_template",
+    "z": "tab-dashboard",
+    "name": "Dark Theme CSS",
+    "group": "",
+    "order": 0,
+    "width": 0,
+    "height": 0,
+    "format": "<style>body,md-content,.nr-dashboard-main,.main-container{background:#0a0a1a !important;}md-toolbar,md-toolbar.md-default-theme{background:#12122a !important;}md-toolbar .md-toolbar-tools,md-toolbar .md-toolbar-tools span{color:#f0f0f0 !important;}md-sidenav,md-sidenav md-content{background:#0a0a1a !important;}md-tabs-canvas,._md-tabs-canvas{background:#12122a !important;}._md-tab-item{color:#a0a0c0 !important;}._md-tab-item.md-active,._md-tab-item._md-active{color:#f5c518 !important;}md-ink-bar{background-color:#f5c518 !important;color:#f5c518 !important;}.nr-dashboard-widget md-card{background:transparent !important;box-shadow:none !important;}.nr-dashboard-widget-header,.nr-group-title,.nr-dashboard-group-name{color:#a0a0c0 !important;border-bottom:1px solid #2a2a50 !important;}::-webkit-scrollbar{width:6px;background:#0a0a1a;}::-webkit-scrollbar-thumb{background:#2a2a50;border-radius:3px;}::-webkit-scrollbar-thumb:hover{background:#f5c518;}</style>",
+    "storeOutMessages": false,
+    "fwdInMessages": false,
+    "resendOnRefresh": true,
+    "templateScope": "global",
+    "x": 130,
+    "y": 940,
+    "wires": [
+      []
+    ]
   }
 ]

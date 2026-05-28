@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CineRec</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="nf-body">
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="nf-nav">
+    <a href="movies.html" class="navbar-brand">
+      <span class="brand-icon">🎬</span>
+      <span><b>Cine</b>Rec</span>
+    </a>
+    <ul class="navbar-links">
+      <li><a href="movies.html" class="active">🎥 Películas</a></li>
+      <li><a href="dashboard.html">📊 Dashboard</a></li>
+    </ul>
+    <div class="navbar-user">
+      <button class="nf-search-btn" onclick="toggleBusqueda()" title="Buscar">🔍</button>
+      <a href="profile.html" class="avatar-link">
+        <div class="user-avatar" id="user-avatar">U</div>
+        <span id="user-name" style="font-size:0.875rem; color:var(--text-secondary);"></span>
+      </a>
+      <button class="btn-logout" onclick="cerrarSesion()">Salir</button>
+    </div>
+  </nav>
+
+  <!-- OVERLAY DE BÚSQUEDA -->
+  <div class="search-overlay" id="search-overlay" onclick="cerrarBusquedaOverlay(event)">
+    <div class="search-overlay-box">
+
+      <!-- Input principal -->
+      <div class="search-overlay-input-wrap">
+        <span class="search-overlay-icon">🔍</span>
+        <input
+          type="text"
+          id="search-input"
+          class="search-overlay-input"
+          placeholder="Buscar películas, géneros, años..."
+          autocomplete="off"
+        />
+        <button class="search-overlay-clear" id="search-clear" onclick="limpiarBusqueda()" title="Limpiar">✕</button>
+        <kbd class="search-esc-hint">ESC</kbd>
+      </div>
+
+      <!-- Filtros -->
+      <div class="search-filters">
+        <div class="search-filter-group">
+          <span class="search-filter-label">Género</span>
+          <div class="search-chips" id="genre-chips">
+            <button class="search-chip active" data-genre="">Todos</button>
+            <button class="search-chip" data-genre="Action">Acción</button>
+            <button class="search-chip" data-genre="Adventure">Aventura</button>
+            <button class="search-chip" data-genre="Animation">Animación</button>
+            <button class="search-chip" data-genre="Comedy">Comedia</button>
+            <button class="search-chip" data-genre="Crime">Crimen</button>
+            <button class="search-chip" data-genre="Documentary">Documental</button>
+            <button class="search-chip" data-genre="Drama">Drama</button>
+            <button class="search-chip" data-genre="Fantasy">Fantasía</button>
+            <button class="search-chip" data-genre="Horror">Terror</button>
+            <button class="search-chip" data-genre="Romance">Romance</button>
+            <button class="search-chip" data-genre="Sci-Fi">Ciencia Ficción</button>
+            <button class="search-chip" data-genre="Thriller">Thriller</button>
+          </div>
+        </div>
+        <div class="search-filter-group search-filter-selects">
+          <div>
+            <span class="search-filter-label">Puntuación mínima</span>
+            <select id="filter-rating" class="search-select">
+              <option value="">Cualquiera</option>
+              <option value="4.5">⭐ 4.5+</option>
+              <option value="4.0">⭐ 4.0+</option>
+              <option value="3.5">⭐ 3.5+</option>
+              <option value="3.0">⭐ 3.0+</option>
+            </select>
+          </div>
+          <div>
+            <span class="search-filter-label">Año</span>
+            <select id="filter-year" class="search-select">
+              <option value="">Cualquiera</option>
+              <option value="2000">2000+</option>
+              <option value="1990">1990–1999</option>
+              <option value="1980">1980–1989</option>
+              <option value="1970">1970–1979</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resultados -->
+      <div class="search-results-header" id="search-results-header" style="display:none;">
+        <span id="search-count"></span>
+      </div>
+      <div class="search-results-grid" id="search-results"></div>
+
+    </div>
+  </div>
+
+  <!-- PELÍCULA DESTACADA -->
+  <div class="hm-featured">
+    <div class="hm-featured-bg" id="hero-bg"></div>
+    <div class="hm-featured-body">
+      <span class="hm-eyebrow">🔥 Más valorada</span>
+      <h1 class="hm-featured-title" id="hero-title">Cargando...</h1>
+      <div class="hm-featured-meta">
+        <span class="hm-rating" id="hero-rating"></span>
+        <span class="hm-pill" id="hero-year"></span>
+        <span class="hm-pill" id="hero-genres"></span>
+        <span class="hm-pill" id="hero-votes"></span>
+      </div>
+      <div class="hm-featured-actions">
+        <button class="btn btn-primary" onclick="abrirModalHero()">▶ Ver detalles</button>
+        <button class="btn btn-secondary" onclick="heroMovie && anadirAListaDeseos(heroMovie.id)">+ Mi lista</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECCIONES DE PELÍCULAS -->
+  <main class="hm-main">
+    <section class="hm-section">
+      <div class="hm-section-head">
+        <h2 class="hm-section-title">⭐ Recomendadas para ti</h2>
+        <span class="hm-section-count" id="count-recs"></span>
+        <span id="recs-label" style="display:none;font-size:0.75rem;color:var(--accent);margin-left:0.75rem;font-style:italic;"></span>
+      </div>
+      <div class="nf-scroll" id="scroll-recs"></div>
+    </section>
+    <section class="hm-section">
+      <div class="hm-section-head"><h2 class="hm-section-title">🔥 Tendencias</h2><span class="hm-section-count" id="count-trending"></span></div>
+      <div class="nf-scroll" id="scroll-trending"></div>
+    </section>
+    <section class="hm-section">
+      <div class="hm-section-head"><h2 class="hm-section-title">💥 Acción y Aventura</h2><span class="hm-section-count" id="count-action"></span></div>
+      <div class="nf-scroll" id="scroll-action"></div>
+    </section>
+    <section class="hm-section">
+      <div class="hm-section-head"><h2 class="hm-section-title">🎭 Drama</h2><span class="hm-section-count" id="count-drama"></span></div>
+      <div class="nf-scroll" id="scroll-drama"></div>
+    </section>
+    <section class="hm-section">
+      <div class="hm-section-head"><h2 class="hm-section-title">😂 Comedia</h2><span class="hm-section-count" id="count-comedy"></span></div>
+      <div class="nf-scroll" id="scroll-comedy"></div>
+    </section>
+    <section class="hm-section">
+      <div class="hm-section-head"><h2 class="hm-section-title">🚀 Ciencia Ficción</h2><span class="hm-section-count" id="count-scifi"></span></div>
+      <div class="nf-scroll" id="scroll-scifi"></div>
+    </section>
+    <section class="hm-section">
+      <div class="hm-section-head"><h2 class="hm-section-title">😱 Terror y Thriller</h2><span class="hm-section-count" id="count-horror"></span></div>
+      <div class="nf-scroll" id="scroll-horror"></div>
+    </section>
+    <section class="hm-section">
+      <div class="hm-section-head"><h2 class="hm-section-title">💕 Romance</h2><span class="hm-section-count" id="count-romance"></span></div>
+      <div class="nf-scroll" id="scroll-romance"></div>
+    </section>
+    <section class="hm-section">
+      <div class="hm-section-head"><h2 class="hm-section-title">🎨 Animación</h2><span class="hm-section-count" id="count-animation"></span></div>
+      <div class="nf-scroll" id="scroll-animation"></div>
+    </section>
+    <section class="hm-section">
+      <div class="hm-section-head"><h2 class="hm-section-title">📰 Documentales</h2><span class="hm-section-count" id="count-documentary"></span></div>
+      <div class="nf-scroll" id="scroll-documentary"></div>
+    </section>
+  </main>
+
+  <!-- MODAL DETALLE -->
+  <div class="movie-modal" id="movie-modal" onclick="cerrarModalEnOverlay(event)">
+    <div class="modal-content">
+      <button class="modal-close" onclick="cerrarModal()">✕</button>
+      <div class="modal-body">
+        <div id="modal-poster-wrap" class="modal-poster"></div>
+        <div class="modal-info">
+          <h2 class="modal-title" id="modal-title"></h2>
+          <div class="modal-meta-row">
+            <span id="modal-year" class="modal-badge"></span>
+            <span id="modal-rating" class="modal-badge gold"></span>
+            <span id="modal-genre" class="modal-badge"></span>
+          </div>
+          <p class="modal-description" id="modal-description"></p>
+          <div class="star-rating" id="star-rating">
+            <span class="star-label">Tu valoración:</span>
+            <div class="stars" id="stars">
+              <button class="star" data-v="1" onclick="valorarPelicula(idPeliculaActual,1)">★</button>
+              <button class="star" data-v="2" onclick="valorarPelicula(idPeliculaActual,2)">★</button>
+              <button class="star" data-v="3" onclick="valorarPelicula(idPeliculaActual,3)">★</button>
+              <button class="star" data-v="4" onclick="valorarPelicula(idPeliculaActual,4)">★</button>
+              <button class="star" data-v="5" onclick="valorarPelicula(idPeliculaActual,5)">★</button>
+            </div>
+            <span class="star-value" id="star-value"></span>
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="anadirAListaDeseos(idPeliculaActual)">📋 Mi lista</button>
+          </div>
+          <div class="modal-stats" id="modal-stats"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+  <script src="js/movies.js"></script>
+</body>
+</html>

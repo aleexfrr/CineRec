@@ -1,14 +1,33 @@
-from pymongo import MongoClient
-import pandas as pd
+"""
+Content-Based Filtering — TF-IDF + Cosine Similarity
+
+La predicción agrega la similitud de todas las películas valoradas por el usuario,
+ponderadas por su rating, y recomienda las más similares no vistas.
+
+Uso:
+    python -m recommender.content_based.content_based --train
+    python -m recommender.content_based.content_based --predict 42
+"""
+import argparse
 import ast
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
+from pymongo import MongoClient
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+from scipy.sparse import csr_matrix
 
 import sys
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 from config import MONGO_URI, DATABASE_NAME
+from recommender.model_store import save_model, load_model
 
+MODEL_NAME = "model_content_based"
+
+
+# ── Conexión ──────────────────────────────────────────────────────────────────
 
 _client = None
 
@@ -19,262 +38,137 @@ def get_db():
     return _client[DATABASE_NAME]
 
 
-# =========================
-# LOAD MOVIES
-# =========================
+# ── Carga de datos ────────────────────────────────────────────────────────────
 
-def load_movies_dataframe():
-
-    print("\nLoading movies from MongoDB...")
-
-    movies_cursor = get_db()["movies"].find()
-
-    movies_df = pd.DataFrame(list(movies_cursor))
-
-    return movies_df
-
-
-# =========================
-# PREPROCESS GENRES
-# =========================
-
-def preprocess_movies(movies_df):
-
-    print("Preprocessing movie genres...")
-
-    movies = movies_df.copy()
-
-    # Convert genres to string
-    movies["genres"] = movies["genres"].apply(
-        lambda x: ast.literal_eval(x)
-        if isinstance(x, str)
-        else x
+def load_movies():
+    print("Cargando películas de MongoDB...")
+    docs = list(get_db()["movies"].find({}, {"movieId": 1, "title": 1, "genres": 1}))
+    df = pd.DataFrame(docs)
+    df["genres"] = df["genres"].apply(
+        lambda x: ast.literal_eval(x) if isinstance(x, str) else x
     )
-
-    movies["genres_text"] = movies["genres"].apply(
-        lambda genres: " ".join(genres)
+    df["genres_text"] = df["genres"].apply(
+        lambda g: " ".join(g) if isinstance(g, list) else ""
     )
-
-    # Reset index to guarantee positional alignment with similarity matrix
-    movies = movies.reset_index(drop=True)
-
-    return movies
+    return df.reset_index(drop=True)
 
 
-# =========================
-# CREATE TF-IDF MATRIX
-# =========================
-
-def create_tfidf_matrix(movies_df):
-
-    print("Creating TF-IDF matrix...")
-
-    tfidf = TfidfVectorizer(stop_words="english")
-
-    tfidf_matrix = tfidf.fit_transform(
-        movies_df["genres_text"]
-    )
-
-    return tfidf_matrix
+def load_ratings():
+    docs = list(get_db()["ratings"].find({}, {"userId": 1, "movieId": 1, "rating": 1}))
+    return pd.DataFrame(docs)
 
 
-# =========================
-# COMPUTE COSINE SIMILARITY
-# =========================
+# ── Entrenamiento ─────────────────────────────────────────────────────────────
 
-def compute_similarity(tfidf_matrix):
+def train():
+    print("\n=== ENTRENAMIENTO — Content-Based (TF-IDF) ===\n")
 
-    print("Computing cosine similarity...")
+    movies_df = load_movies()
 
-    similarity_matrix = cosine_similarity(tfidf_matrix)
+    print("Construyendo matriz TF-IDF...")
+    vectorizer = TfidfVectorizer(stop_words="english")
+    tfidf_matrix = vectorizer.fit_transform(movies_df["genres_text"])
 
-    return similarity_matrix
-
-
-# =========================
-# GET MOVIE INDEX
-# =========================
-
-def get_movie_index(movies_df, movie_title):
-
-    matches = movies_df[
-        movies_df["title"].str.lower() == movie_title.lower()
-    ]
-
-    if matches.empty:
-        return None
-
-    # Devuelve la posición real en el DataFrame (no el label del índice)
-    return movies_df.index.get_loc(matches.index[0])
-
-
-# =========================
-# RECOMMEND SIMILAR MOVIES
-# =========================
-
-def recommend_similar_movies(
-    movie_title,
-    movies_df,
-    similarity_matrix,
-    top_n=10
-):
-
-    print(f"\nGenerating recommendations for:")
-    print(f"{movie_title}")
-
-    movie_index = get_movie_index(
-        movies_df,
-        movie_title
-    )
-
-    if movie_index is None:
-
-        print("\nMovie not found.")
-
-        return None
-
-    # Similarity scores
-    similarity_scores = list(
-        enumerate(similarity_matrix[movie_index])
-    )
-
-    # Sort by similarity
-    similarity_scores = sorted(
-        similarity_scores,
-        key=lambda x: x[1],
-        reverse=True
-    )
-
-    # Remove same movie
-    similarity_scores = similarity_scores[1:]
-
-    # Top similar movies
-    top_movies = similarity_scores[:top_n]
-
-    recommendations = []
-
-    for movie_idx, similarity_score in top_movies:
-
-        movie = movies_df.iloc[movie_idx]
-
-        recommendations.append({
-            "movieId": int(movie["movieId"]),
-            "title": movie["title"],
-            "genres": movie["genres"],
-            "similarity_score": round(
-                float(similarity_score),
-                4
-            )
-        })
-
-    recommendations_df = pd.DataFrame(recommendations)
-
-    return recommendations_df
-
-
-# =========================
-# SAVE RECOMMENDATIONS
-# =========================
-
-def save_recommendations(
-    movie_title,
-    recommendations_df
-):
-
-    print("\nSaving recommendations into MongoDB...")
-
-    recommendations_collection = get_db()["recommendations"]
-
-    recommendations_collection.delete_many({
-        "type": "content_based",
-        "source_movie": movie_title
-    })
-
-    recommendations_list = recommendations_df.to_dict(
-        "records"
-    )
-
-    document = {
-        "type": "content_based",
-        "source_movie": movie_title,
-        "recommendations": recommendations_list
+    # movie_id → posición en la matriz
+    movie_id_to_idx = {
+        int(row["movieId"]): idx
+        for idx, row in movies_df.iterrows()
     }
 
-    recommendations_collection.insert_one(document)
+    save_model({
+        "vectorizer":    vectorizer,
+        "tfidf_matrix":  tfidf_matrix,   # scipy sparse — eficiente en memoria
+        "movie_id_to_idx": movie_id_to_idx,
+        "movie_ids":     movies_df["movieId"].astype(int).tolist(),
+        "titles":        movies_df["title"].tolist(),
+        "genres":        movies_df["genres"].tolist(),
+    }, MODEL_NAME)
 
-    print("Recommendations saved successfully.")
-
-
-# =========================
-# DISPLAY RECOMMENDATIONS
-# =========================
-
-def display_recommendations(
-    movie_title,
-    recommendations_df
-):
-
-    print("\n==============================")
-    print(" CONTENT-BASED RECOMMENDATIONS ")
-    print("==============================\n")
-
-    print(f"Movie selected: {movie_title}\n")
-
-    for i, (_, row) in enumerate(recommendations_df.iterrows(), start=1):
-
-        print(
-            f"{i}. "
-            f"{row['title']} | "
-            f"Similarity: "
-            f"{row['similarity_score']:.4f}"
-        )
-
-    print("\n==============================\n")
+    print(f"Matriz TF-IDF: {tfidf_matrix.shape[0]} películas × {tfidf_matrix.shape[1]} términos")
+    print("\nEntrenamiento completado.")
 
 
-# =========================
-# MAIN
-# =========================
+# ── Predicción ────────────────────────────────────────────────────────────────
 
-def main():
+def predict(user_id: int, top_n: int = 10):
+    print(f"\n=== PREDICCIÓN — Usuario {user_id} ===\n")
 
-    MOVIE_TITLE = "Toy Story"
+    data        = load_model(MODEL_NAME)
+    tfidf       = data["tfidf_matrix"]
+    id_to_idx   = data["movie_id_to_idx"]
+    movie_ids   = data["movie_ids"]
+    titles      = data["titles"]
+    genres      = data["genres"]
 
-    movies_df = load_movies_dataframe()
+    ratings_df = load_ratings()
+    user_ratings = ratings_df[ratings_df["userId"] == user_id]
 
-    movies_df = preprocess_movies(movies_df)
+    if user_ratings.empty:
+        print(f"El usuario {user_id} no tiene ratings. Sin recomendaciones.")
+        return []
 
-    tfidf_matrix = create_tfidf_matrix(
-        movies_df
-    )
+    # Perfil del usuario: vector agregado ponderado por rating
+    # profile = Σ (rating_i / max_rating) * tfidf_vector_i
+    profile = np.zeros(tfidf.shape[1])
+    for _, row in user_ratings.iterrows():
+        idx = id_to_idx.get(int(row["movieId"]))
+        if idx is not None:
+            weight = row["rating"] / 5.0
+            profile += weight * tfidf[idx].toarray().flatten()
 
-    similarity_matrix = compute_similarity(
-        tfidf_matrix
-    )
+    if profile.sum() == 0:
+        print("Perfil del usuario vacío (ninguna película valorada existe en el modelo).")
+        return []
 
-    recommendations = recommend_similar_movies(
-        MOVIE_TITLE,
-        movies_df,
-        similarity_matrix,
-        top_n=10
-    )
+    profile_norm = profile / np.linalg.norm(profile)
 
-    if recommendations is not None:
+    # Similitud del perfil contra todas las películas
+    scores = cosine_similarity(profile_norm.reshape(1, -1), tfidf).flatten()
 
-        display_recommendations(
-            MOVIE_TITLE,
-            recommendations
-        )
+    # Excluir películas ya vistas
+    vistas = set(user_ratings["movieId"].astype(int).tolist())
+    recomendaciones = []
+    for i, score in enumerate(scores):
+        mid = int(movie_ids[i])
+        if mid not in vistas:
+            recomendaciones.append({
+                "movieId":         mid,
+                "title":           titles[i],
+                "genres":          genres[i],
+                "similarity_score": round(float(score), 4)
+            })
 
-        save_recommendations(
-            MOVIE_TITLE,
-            recommendations
-        )
+    recomendaciones.sort(key=lambda x: x["similarity_score"], reverse=True)
+    top = recomendaciones[:top_n]
 
-    print(
-        "\nContent-based recommender completed successfully."
-    )
+    # Mostrar
+    print(f"Top {top_n} recomendaciones para usuario {user_id}:")
+    for i, r in enumerate(top, 1):
+        print(f"  {i}. {r['title']} | Similitud: {r['similarity_score']:.4f}")
 
+    # Guardar en MongoDB
+    col = get_db()["recommendations"]
+    col.delete_many({"type": "content_based", "userId": user_id})
+    col.insert_one({
+        "type": "content_based",
+        "userId": user_id,
+        "recommendations": top
+    })
+    print(f"\nRecomendaciones guardadas en MongoDB.")
+    return top
+
+
+# ── CLI ───────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Content-Based Filtering (TF-IDF)")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--train",   action="store_true", help="Entrenar y guardar modelo")
+    group.add_argument("--predict", type=int, metavar="USER_ID", help="Predecir para un usuario")
+    parser.add_argument("--top", type=int, default=10, help="Número de recomendaciones (default: 10)")
+    args = parser.parse_args()
+
+    if args.train:
+        train()
+    else:
+        predict(args.predict, args.top)

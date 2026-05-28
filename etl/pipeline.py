@@ -1,17 +1,19 @@
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 from transform import (
     transform_movies,
     transform_ratings,
     transform_users,
-    save_processed_data
+    save_processed_data,
 )
-
 from extract import load_all_datasets
-
 from load_mongodb import (
     insert_movies,
     insert_ratings,
     insert_users,
-    create_indexes
+    create_indexes,
 )
 
 

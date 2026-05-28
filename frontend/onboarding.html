@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CineRec — Tus preferencias</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="onboarding-page">
+    <div class="onboarding-container">
+
+      <!-- Cabecera -->
+      <div class="onboarding-header">
+        <div class="onboarding-logo">🎬 <b>Cine</b>Rec</div>
+        <h1 class="onboarding-title">¿Qué tipo de películas te gustan?</h1>
+        <p class="onboarding-sub">
+          Reparte <strong>5 puntos</strong> entre los 6 grupos según tus preferencias.<br>
+          Cuantos más puntos le des a un grupo, más recomendaciones de ese estilo recibirás.
+        </p>
+      </div>
+
+      <!-- Indicador de puntos -->
+      <div class="points-bar">
+        <div class="points-dots" id="points-dots">
+          <!-- generado por JS -->
+        </div>
+        <div class="points-remaining">
+          <div class="points-remaining-value" id="points-left">5</div>
+          <div class="points-remaining-label">puntos restantes</div>
+        </div>
+      </div>
+
+      <!-- Grid de 6 grupos -->
+      <div class="groups-grid" id="groups-grid">
+        <!-- generado por JS -->
+      </div>
+
+      <!-- Footer -->
+      <div class="onboarding-footer">
+        <span class="hint" id="footer-hint">Asigna todos los puntos para continuar</span>
+        <div style="display:flex; gap:0.75rem;">
+          <button class="btn btn-secondary" onclick="saltarOnboarding()">Saltar por ahora</button>
+          <button class="btn btn-primary" id="btn-continue" disabled onclick="finalizarOnboarding()">
+            Guardar y continuar →
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="js/onboarding.js"></script>
+</body>
+</html>
