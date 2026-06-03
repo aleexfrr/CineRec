@@ -68,7 +68,32 @@ else
     echo "        python3 etl/pipeline.py"
 fi
 
-# ── 6. Resumen ────────────────────────────────────────────────
+# ── 6. Entrenar modelos ML ────────────────────────────────────
+info "Esperando a que el backend esté listo..."
+MAX=60
+COUNT=0
+until curl -sf http://localhost:8000/ &>/dev/null; do
+    sleep 2
+    COUNT=$((COUNT + 2))
+    if [ $COUNT -ge $MAX ]; then
+        err "El backend no respondió en ${MAX}s. Revisa: docker compose logs backend"
+    fi
+    echo -n "."
+done
+echo ""
+ok "Backend listo"
+
+info "Entrenando modelo de filtrado colaborativo (SVD)..."
+docker exec cinerec_backend python -m recommender.collaborative.collaborative_filtering --train \
+    && ok "Modelo colaborativo entrenado" \
+    || echo -e "${YELLOW}[AVISO]${NC} No se pudo entrenar el modelo colaborativo (continuando...)"
+
+info "Entrenando modelo basado en contenido (TF-IDF)..."
+docker exec cinerec_backend python -m recommender.content_based.content_based --train \
+    && ok "Modelo de contenido entrenado" \
+    || echo -e "${YELLOW}[AVISO]${NC} No se pudo entrenar el modelo de contenido (continuando...)"
+
+# ── 7. Resumen ────────────────────────────────────────────────
 echo ""
 echo "=============================================="
 echo -e "${GREEN}  Instalación completada${NC}"

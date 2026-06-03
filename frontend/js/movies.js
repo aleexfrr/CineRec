@@ -118,9 +118,11 @@ async function cargarRecomendaciones() {
     // Mostrar origen de las recomendaciones
     if (label) {
       const textos = {
-        content_based: '🎯 Basado en tus valoraciones',
-        onboarding:    '🎬 Basado en tus preferencias',
-        trending:      '🔥 Las más populares',
+        collaborative:     'Recomendado por IA (filtrado colaborativo)',
+        content_based_ml:  'Recomendado por IA (basado en contenido)',
+        content_based:     'Basado en tus valoraciones',
+        onboarding:        'Basado en tus preferencias',
+        trending:          'Las más populares',
       };
       label.textContent = textos[data.source] || '';
       label.style.display = data.source ? 'inline' : 'none';

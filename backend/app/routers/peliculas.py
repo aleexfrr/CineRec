@@ -82,7 +82,24 @@ async def tendencias(_user: dict = Depends(usuario_actual)):
 async def recomendaciones(user: dict = Depends(usuario_actual)):
     user_id = str(user["_id"])
 
-    # 1. Obtener todas las valoraciones del usuario
+    # 1. Intentar modelos ML si el usuario está sincronizado
+    ml_user_id = user.get("ml_user_id")
+    if ml_user_id:
+        try:
+            from app.recommender_service import recomendar_ml
+            movie_ids, ml_source = await recomendar_ml(int(ml_user_id))
+            if movie_ids:
+                docs = await db["peliculas"].find(
+                    {"_id": {"$in": movie_ids}}
+                ).to_list(length=len(movie_ids))
+                id_to_doc = {d["_id"]: d for d in docs}
+                ordered = [id_to_doc[mid] for mid in movie_ids if mid in id_to_doc]
+                if ordered:
+                    return {"movies": [_formato(d) for d in ordered], "source": ml_source}
+        except Exception:
+            pass  # fallback al algoritmo propio
+
+    # 2. Obtener todas las valoraciones del usuario
     valoraciones = await db["valoraciones"].find(
         {"user_id": user_id}
     ).to_list(length=500)
